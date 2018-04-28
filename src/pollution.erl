@@ -15,8 +15,11 @@
   create_monitor/0,
   add_station/3,
   addValue/5,
-  removeValue/4
-%%  ,getStationMean/3
+  removeValue/4,
+  getOneValue/3,
+  getStationMean/3,
+  getDailyMean/3,
+  getOverLimit/2
 ]).
 
 
@@ -28,7 +31,6 @@ create_monitor() ->
 add_station(Name,{X,Y} = Location,Monitor) when is_float(X), is_float(Y)->
   CheckedIfNameUsed = check_if_ok(maps:find(Location,Monitor#monitor.locationNames)),
   CheckIfLocationUsed = check_if_ok(maps:find(Name,Monitor#monitor.locationStations)),
-%%  io:format("Name: ~s Location: ~s ~n",[CheckedIfNameUsed,CheckIfLocationUsed]),
   add_checked_station(CheckedIfNameUsed,CheckIfLocationUsed,Monitor,Name,Location);
 
 add_station(_,_,_) ->
@@ -75,7 +77,7 @@ addValue(true,false,Location,Time,Type,Value,Monitor) ->
 addValue(true,true,_,_,_,_,_)->
   {error,"Duplicate measurements"}.
 
-check_if_same_measurement(Type,Value,Time,Monitor) ->
+check_if_same_measurement(Type,_,Time,Monitor) ->
   check_if_ok(maps:find({Time,Type},Monitor#station.measurements)).
 
 
@@ -105,28 +107,67 @@ removeValue(Monitor,Name,Date,Type) ->
 
 
 removeValue(true,{ok,Station},Name,Date,Type,Monitor) ->
-  removeValue(true,check_if_ok(maps:find({Date,Type},Station#station.measurements)),Station,Name,Date,Type,Monitor);
+  removeValue(true,check_if_ok(maps:find({Date,Type},Station#station.measurements)),
+    Station,Name,Date,Type,Monitor);
 
 removeValue(false,_,_,_,_,_) ->
   {error,"Station not found"}.
 
-removeValue(true,true,Station,Name,Date,Type,Monitor) ->
+removeValue(true,true,Station,_,Date,Type,Monitor) ->
   {ok,Monitor#monitor{
     locationStations = maps:update(
       Station#station.name,
-      Station#station.location,
       Station#station{
         measurements = maps:remove(
-        {Date,Type},Station#station.measurements
-      )
-      }
-    ,Monitor#monitor.locationStations)}};
+          {Date, Type},
+          Station#station.measurements)},
+      Monitor#monitor.locationStations)}};
+
 
 removeValue(true,false,_,_,_,_,_) ->
   {error,"No measurement found"}.
 
 getOneValue(Type,Time,Station) ->
-  checkValue(maps:find({Time,Type},Station#station.measurements)).
+  checkValue(maps:get({Time,Type},Station#station.measurements,false)).
 
-checkValue({ok,#measurement{value = Value}}) -> Value;
-checkValue(_) -> {error,"Value not found"}.
+checkValue(false) -> {error,"Value not found"};
+
+checkValue(#measurement{type = _,value = Value,time = _}) -> {ok,Value}.
+
+getStationMean(Monitor,Type,{_,_}=StationCoords) ->
+  getStationMean(Monitor,Type,maps:get(StationCoords,Monitor#monitor.locationNames));
+
+getStationMean(Monitor,Type,StationName) ->
+  getStationMean(maps:get(StationName,Monitor#monitor.locationStations),Type).
+
+getStationMean(Station,Type) ->
+  Values = maps:values(Station#station.measurements),
+  Filtered = lists:filter(
+    fun(Elem) -> (Elem#measurement.type == Type) end,Values),
+  lists:foldl(fun(X,Sum) -> X#measurement.value + Sum end,0,Filtered)
+    /length(Filtered).
+
+getDailyMean(Monitor,Type,{_,_,_}=Day) ->
+  Stations = maps:values(Monitor#monitor.locationStations),
+  Measurements = lists:foldl(
+    fun(X,Acc) -> maps:values(X#station.measurements)++Acc end,[],Stations),
+  Folded = lists:foldl(
+    fun(X,[Head|Tail]) when element(1,X#measurement.time) == Day andalso X#measurement.type == Type -> [Head+X#measurement.value|Tail+1];
+      (_,Acc) -> Acc end, [0,0], Measurements),
+  io:format("~w ~w",Folded),
+  lists:nth(1,Folded)
+    /lists:nth(2,Folded).
+
+getOverLimit(Monitor,Hour) ->
+  Stations = maps:values(Monitor#monitor.locationStations),
+  Measurements = lists:foldl(
+    fun(X,Acc) -> maps:values(X#station.measurements)++Acc end,[],Stations),
+
+  MeasurementsFiltered = lists:filter(
+    fun(Elem) ->
+      (Elem#measurement.type == pm10 and Elem#measurement.value > 50) or
+        (Elem#measurement.type == pm25 and Elem#measurement.value > 30) end,Measurements),
+
+  lists:foldl(
+    fun(X,Sum) when element(2,X#measurement.time) == {Hour,_,_} -> Sum+1;
+      (_,Acc) -> Acc end, 0, MeasurementsFiltered).

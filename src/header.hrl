@@ -15,7 +15,7 @@
 -record(station, {
   name = "",
   location,
-  measurements = #{}}). %indexed with tuple {Time,Type}
+  measurements = #{}}). %indexed with tuple {Time,Type} => measurement
 -record(measurement, {
   type,
   value,
