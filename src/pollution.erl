@@ -151,12 +151,15 @@ getDailyMean(Monitor,Type,{_,_,_}=Day) ->
   Stations = maps:values(Monitor#monitor.locationStations),
   Measurements = lists:foldl(
     fun(X,Acc) -> maps:values(X#station.measurements)++Acc end,[],Stations),
-  Folded = lists:foldl(
-    fun(X,[Head|Tail]) when element(1,X#measurement.time) == Day andalso X#measurement.type == Type -> [Head+X#measurement.value|Tail+1];
-      (_,Acc) -> Acc end, [0,0], Measurements),
-  io:format("~w ~w",Folded),
-  lists:nth(1,Folded)
-    /lists:nth(2,Folded).
+  Sum = lists:foldl(
+    fun(X,Acc) when element(1,X#measurement.time) == Day andalso X#measurement.type == Type -> X#measurement.value+Acc;
+      (_,Acc) -> Acc end,0,Measurements
+  ),
+  Amount = lists:foldl(
+    fun(X,Acc) when element(1,X#measurement.time) == Day andalso X#measurement.type == Type -> 1+Acc;
+      (_,Acc) -> Acc end,0,Measurements
+  ),
+  Sum/Amount.
 
 getOverLimit(Monitor,Hour) ->
   Stations = maps:values(Monitor#monitor.locationStations),
@@ -165,9 +168,9 @@ getOverLimit(Monitor,Hour) ->
 
   MeasurementsFiltered = lists:filter(
     fun(Elem) ->
-      (Elem#measurement.type == pm10 and Elem#measurement.value > 50) or
-        (Elem#measurement.type == pm25 and Elem#measurement.value > 30) end,Measurements),
+      (Elem#measurement.type == pm10 andalso Elem#measurement.value > 50) or
+        (Elem#measurement.type == pm25 andalso Elem#measurement.value < 30) end,Measurements),
 
   lists:foldl(
-    fun(X,Sum) when element(2,X#measurement.time) == {Hour,_,_} -> Sum+1;
+    fun(X,Sum) when element(1,element(2,X#measurement.time)) == Hour -> Sum+1;
       (_,Acc) -> Acc end, 0, MeasurementsFiltered).

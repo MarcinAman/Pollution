@@ -133,3 +133,20 @@ getDailyMean_test()->
   ?assertEqual(15.0,pollution:getDailyMean(P5,pm10,{2018,4,28})),
   ?assertEqual(150.0,pollution:getDailyMean(P5,pm20,{2018,4,28})).
 
+getOverLimit_test() ->
+  %setup
+  {ok,P} = pollution:create_monitor(),
+  {ok,P1} = pollution:add_station("Some",{10.0,20.0},P),
+  Time = {{2018,4,28},{18,0,49}},
+  {ok,P2} = pollution:addValue({10.0,20.0},Time,pm10,10,P1),
+  Time2 = {{2018,4,28},{19,0,50}},
+  {ok,P3} = pollution:addValue({10.0,20.0},Time2,pm10,60,P2),
+  Time3 = {{2018,4,30},{18,0,50}},
+  {ok,P4} = pollution:addValue({10.0,20.0},Time3,pm10,100,P3),
+  Time4 = {{2018,4,28},{18,0,51}},
+  {ok,P5} = pollution:addValue({10.0,20.0},Time4,pm20,150,P4),
+
+  %test
+  ?assertEqual(1,pollution:getOverLimit(P5,18)).
+
+
