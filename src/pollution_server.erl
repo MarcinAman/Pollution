@@ -24,7 +24,7 @@
 ]).
 
 start() ->
-  spawn_link(?MODULE, init, []).
+  register(server,spawn(?MODULE, init, [])).
 
 init() ->
   Monitor = pollution:create_monitor(),
