@@ -79,6 +79,10 @@ run_server(Monitor) ->
       Value = pollution:getOverLimit(Monitor,Hour),
       send_value(Pid,{ok,Value},Monitor);
 
+    {getStationMean,Pid,[Type,Station]} ->
+      Value = pollution:getStationMean(Monitor,Type,Station),
+      send_value(Pid,{ok,Value},Monitor);
+
     {stop,Pid,[]} ->
       Pid ! {ok,Monitor};
 

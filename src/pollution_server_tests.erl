@@ -72,8 +72,8 @@ get_station_mean_test() ->
   pollution_server:addValue({10.0,20.0},{{2018,5,14},{12,46,59}},pm10,10),
   pollution_server:addValue({10.0,20.0},{{2018,5,14},{12,47,17}},pm10,20),
 
-  ?assertMatch(15.0,pollution_server:getStationMean(pm10,"Some")),
-  ?assertMatch(15.0,pollution_server:getStationMean(pm10,{10.0,20.0})),
+  ?assertMatch({ok,15.0},pollution_server:getStationMean(pm10,"Some")),
+  ?assertMatch({ok,15.0},pollution_server:getStationMean(pm10,{10.0,20.0})),
   pollution_server:stop().
 
 get_daily_mean_test() ->
@@ -97,7 +97,7 @@ get_over_limit_test() ->
   pollution_server:addValue({22.0,33.0},{{2018,5,10},{13,43,22}},pm25,30),
   pollution_server:addValue({22.0,33.0},{{2018,5,10},{13,44,22}},pm25,10),
 
-  ?assertMatch(1,pollution_server:getOverLimit(18)),
-  
+  ?assertMatch({ok,1},pollution_server:getOverLimit(13)),
+
   pollution_server:stop().
 
