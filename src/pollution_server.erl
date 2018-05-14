@@ -24,7 +24,7 @@
 ]).
 
 start() ->
-  register(server,spawn(?MODULE, init, [])).
+  register(server,spawn(pollution_server, init, [])).
 
 init() ->
   Monitor = pollution:create_monitor(),
@@ -45,7 +45,7 @@ send_monitor(Pid, {error,Monitor},PrevMonitor)->
   run_server(PrevMonitor).
 
 send_value(Pid,{ok,Value},Monitor) ->
-  Pid ! {ok,Value,Monitor},
+  Pid ! {ok,Value},
   run_server(Monitor);
 
 send_value(Pid,{error,Value},Monitor) ->
