@@ -20,11 +20,16 @@
   getStationMean/2,
   getDailyMean/2,
   getOverLimit/1,
-  stop/0
+  stop/0,
+  crash/0,
+  start2/0
 ]).
 
 start() ->
   register(server,spawn(pollution_server, init, [])).
+
+start2() ->
+  spawn_link(pollution_server,init,[]).
 
 init() ->
   Monitor = pollution:create_monitor(),
@@ -86,6 +91,9 @@ run_server(Monitor) ->
     {stop,Pid,[]} ->
       Pid ! {ok,Monitor};
 
+    {crash,_,_} ->
+      1/0;
+
     {_,Pid,_} ->
       Pid ! {error,"Pattern not found",""}
   end.
@@ -136,3 +144,6 @@ getOverLimit(Hour) ->
 
 stop() ->
   send_request(stop,[]).
+
+crash() ->
+  send_request(crash,[]).
