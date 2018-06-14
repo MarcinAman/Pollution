@@ -31,7 +31,7 @@ start_link() ->
 
 %% Handling calls %%
 
-handle_call({add_station,[Name,{_,_}=Location]},_From,{ok,State}) ->
+handle_call({add_station,[Name,{_,_}=Location]},_From,State) ->
   case pollution:add_station(Name,Location,State) of
     {ok, NewMonitor} ->
       {reply,NewMonitor,NewMonitor};
@@ -39,35 +39,35 @@ handle_call({add_station,[Name,{_,_}=Location]},_From,{ok,State}) ->
       {reply,{error, Reason},State}
   end;
 
-handle_call({add_value,[{_,_} = Location,Time,Type,Value]},_From,{ok,State}) ->
+handle_call({add_value,[{_,_} = Location,Time,Type,Value]},_From,State) ->
   NewMonitor = pollution:addValue(Location,Time,Type,Value,State),
   {reply,NewMonitor,NewMonitor};
 
-handle_call({remove_value,[{_,_}=Location,Date,Type]},_From,{ok,State}) ->
+handle_call({remove_value,[{_,_}=Location,Date,Type]},_From,State) ->
   NewMonitor = pollution:removeValue(State,Location,Date,Type),
   {reply,NewMonitor,NewMonitor};
 
-handle_call({remove_value,[Name,Date,Type]},_From,{ok,State}) ->
+handle_call({remove_value,[Name,Date,Type]},_From,State) ->
   NewMonitor = pollution:removeValue(State,Name,Date,Type),
   {reply,NewMonitor,NewMonitor};
 
-handle_call({get_one_value,[Type,Time,Station]},_From,{ok,State})->
+handle_call({get_one_value,[Type,Time,Station]},_From,State)->
   Value = pollution:getOneValue(Type,Time,Station),
   {reply,Value,{ok,State}};
 
-handle_call({get_daily_mean,[Type,{_,_,_}=Day]},_From,{ok,State})->
+handle_call({get_daily_mean,[Type,{_,_,_}=Day]},_From,State)->
   Value = pollution:getDailyMean(State,Type,Day),
   {reply,Value,{ok,State}};
 
-handle_call({get_over_limit,[Hour]},_From,{ok,State})->
+handle_call({get_over_limit,[Hour]},_From,State)->
   Value = pollution:getOverLimit(State,Hour),
   {reply,Value,{ok,State}};
 
-handle_call({get_station_mean,[Type,Station]},_From,{ok,State})->
+handle_call({get_station_mean,[Type,Station]},_From,State)->
   Value = pollution:getStationMean(State,Type,Station),
   {reply,Value,{ok,State}};
 
-handle_call({stop,[]},_From,{ok,State}) ->
+handle_call({stop,[]},_From,State) ->
   terminate(normal,State).
 
 
@@ -82,7 +82,7 @@ close() ->
   gen_server:cast(?MODULE,{stop,[]}).
 
 init(_) ->
-  {ok,pollution:create_monitor()}.
+  pollution:create_monitor().
 
 removeValue({_,_} = Location,Date,Type) ->
   gen_server:call(?MODULE,{remove_value,[Location,Date,Type]});
