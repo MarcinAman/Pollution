@@ -45,7 +45,8 @@
   drop_tables_no_check/1,
   disconnect/1,
   test_all_methods/0,
-  convert_time_to_string/1
+  convert_time_to_string/1,
+  convert_string_to_time/1
 ]).
 
 start() ->
@@ -143,6 +144,16 @@ remove_value_no_check(Ref,Date,Type,Index) ->
 
 convert_time_to_string({{YY,MM,DD},{HH,MI,SS}}) ->
   integer_to_list(YY)++"/"++integer_to_list(MM)++"/"++integer_to_list(DD)++" "++integer_to_list(HH)++"/"++integer_to_list(MI)++"/"++integer_to_list(SS).
+
+convert_string_to_time(Value) ->
+  Divided = string:tokens(Value," "),
+  [Head,Tail] = lists:map(fun(A) -> parse_single_tuple(A) end,Divided),
+  {Head,Tail}.
+
+parse_single_tuple(Value) ->
+  Divided = string:tokens(Value,"/"),
+  [Fst,Sec,Thr] = lists:map(fun(A) -> string:to_integer(A) end,Divided),
+  {Fst,Sec,Thr}.
 
 drop_tables_no_check(Ref) ->
   {

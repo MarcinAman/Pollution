@@ -62,14 +62,43 @@ run_server(Monitor) ->
   receive
     {add_station,Pid,[Name,{_,_}=Location]} ->
       UpdatedMonitor = pollution:add_station(Name,Location,Monitor),
+
+      {ok,Ref} = pollution_server_odbc:connect(),
+      case UpdatedMonitor of
+        {ok,_} -> pollution_server_odbc:add_station(Ref,Name,Location);
+        _ -> error
+      end,
+      pollution_server_odbc:disconnect(Ref),
+
       send_monitor(Pid,UpdatedMonitor,Monitor);
 
     {addValue,Pid,[{_,_} = Location,Time,Type,Value]} ->
       UpdatedMonitor = pollution:addValue(Location,Time,Type,Value,Monitor),
+
+      {ok,Ref} = pollution_server_odbc:connect(),
+      case UpdatedMonitor of
+        {ok,_} -> pollution_server_odbc:add_value(Ref,Location,Time,Type,Value);
+        _ -> error
+      end,
+      pollution_server_odbc:disconnect(Ref),
+
       send_monitor(Pid,UpdatedMonitor,Monitor);
 
-    {removeValue,Pid,[Location,Date,Type]} ->
+    {removeValue,Pid,[{_,_} = Location,Date,Type]} ->
       UpdatedMonitor = pollution:removeValue(Monitor,Location,Date,Type), %location can be a name string
+
+      {ok,Ref} = pollution_server_odbc:connect(),
+      case UpdatedMonitor of
+        {ok,_} -> pollution_server_odbc:remove_value(Ref,Location,Date,Type);
+        _ -> error
+      end,
+      pollution_server_odbc:disconnect(Ref),
+
+      send_monitor(Pid,UpdatedMonitor,Monitor);
+
+    {removeValue,Pid,[Name,Date,Type]} ->
+      UpdatedMonitor = pollution:removeValue(Monitor,Name,Date,Type),
+
       send_monitor(Pid,UpdatedMonitor,Monitor);
 
     {getOneValue,Pid,[Type,Time,Station]} ->
