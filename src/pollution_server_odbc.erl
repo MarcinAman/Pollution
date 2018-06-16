@@ -46,7 +46,8 @@
   disconnect/1,
   test_all_methods/0,
   convert_time_to_string/1,
-  convert_string_to_time/1
+  convert_string_to_time/1,
+  get_station_by_id/1
 ]).
 
 start() ->
@@ -108,7 +109,7 @@ add_value(Ref,{_,_} = Location, Time,Type,Value) ->
 add_value_no_check(Ref,Time,Type,Value,Index) ->
   case odbc:param_query(Ref,"insert into Measurements (type,date,value,station_id) values(?,?,?,?)",
     [
-      {{sql_varchar,10},[atom_to_list(Type)]},
+      {{sql_varchar,10},[Type]},
       {{sql_varchar,50},[convert_time_to_string(Time)]},
       {sql_integer,[Value]},
       {sql_integer,[Index]}
@@ -136,11 +137,20 @@ remove_value_no_check(Ref,Date,Type,Index) ->
     [
       {sql_integer,[Index]},
       {{sql_varchar,50},[convert_time_to_string(Date)]},
-      {{sql_varchar,10},[atom_to_list(Type)]}
+      {{sql_varchar,10},[Type]}
     ]) of
     {updated,_} -> ok;
     Error -> Error
   end.
+
+get_station_by_id(ID) ->
+  {ok,Ref} = connect(),
+  Location = case odbc:param_query(Ref,"select x,y from Stations where station_id=?",[{sql_integer,ID}]) of
+    {selected,_,[{X,Y}]} -> {ok,{X,Y}};
+    {error,Reason} -> {error,Reason}
+  end,
+  disconnect(Ref),
+  Location.
 
 convert_time_to_string({{YY,MM,DD},{HH,MI,SS}}) ->
   integer_to_list(YY)++"/"++integer_to_list(MM)++"/"++integer_to_list(DD)++" "++integer_to_list(HH)++"/"++integer_to_list(MI)++"/"++integer_to_list(SS).
@@ -168,8 +178,9 @@ test_all_methods() ->
   CreateMeasurements = create_measurements(Ref),
   AddStation = add_station(Ref,"Stacja",{10.0,20.0}),
   Time = calendar:local_time(),
-  AddValue = add_value(Ref,{10.0,20.0},Time,pm10,20),
-  {Ref,CreateStations,CreateMeasurements,AddStation,AddValue}.
+  AddValue = add_value(Ref,{10.0,20.0},Time,"PM10",20),
+  RemoveValue = remove_value(Ref,{10.0,20.0},Time,"PM10"),
+  {Ref,CreateStations,CreateMeasurements,AddStation,AddValue,RemoveValue}.
 
 disconnect(Ref) ->
   odbc:disconnect(Ref),

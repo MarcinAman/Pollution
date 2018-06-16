@@ -22,7 +22,9 @@
   getOverLimit/1,
   stop/0,
   crash/0,
-  start2/0
+  start2/0,
+  get_stations_from_database/1,
+  get_measurements_from_database/1
 ]).
 
 start() ->
@@ -40,6 +42,51 @@ init({ok,Monitor}) ->
 
 init(Error) ->
   Error.
+
+get_stations_from_database(Monitor) ->
+  {ok,Ref} = pollution_server_odbc:connect(),
+  Monitor = case pollution_server_odbc:fetch_stations(Ref) of
+    {selected, Columns,Values} -> get_stations_from_database(Monitor,Columns,Values);
+    {error,Reason} -> {error,Reason}
+  end,
+  pollution_server_odbc:disconnect(Ref),
+  Monitor.
+
+get_stations_from_database({error,Reason},_,_) ->
+  {error,Reason};
+
+get_stations_from_database({ok,Monitor},_,[]) ->
+  {ok,Monitor};
+
+get_stations_from_database({ok,Monitor},Columns,[CurrentValue|Tail]) ->
+  {_,X,Y,Name} = CurrentValue,
+  UpdatedMonitor = pollution:add_station(Name,{X,Y},Monitor),
+  get_stations_from_database(UpdatedMonitor,Columns,Tail).
+
+get_measurements_from_database(Monitor) ->
+  {ok,Ref} = pollution_server_odbc:connect(),
+  Monitor = case pollution_server_odbc:fetch_measurements(Ref) of
+              {selected, Columns,Values} -> get_measurements_from_database(Monitor,Columns,Values);
+              {error,Reason} -> {error,Reason}
+            end,
+  pollution_server_odbc:disconnect(Ref),
+  Monitor.
+
+get_measurements_from_database({error,Reason},_,_) ->
+  {error,Reason};
+
+get_measurements_from_database({ok,Monitor},_,[]) ->
+  {ok,Monitor};
+
+get_measurements_from_database({ok,Monitor},Columns,[CurrentValue|Tail]) ->
+  {_,Type,Value,Date,StationID} = CurrentValue,
+  Location = case pollution_server_odbc:get_station_by_id(StationID) of
+    {ok,Value} -> Value;
+    {error,Reason} -> get_measurements_from_database({error,Reason},Columns,Tail)
+  end,
+  ConvertedTime = pollution_server_odbc:convert_string_to_time(Date),
+  UpdatedMonitor = pollution:addValue(Location,ConvertedTime,Type,Value,Monitor),
+  get_measurements_from_database(UpdatedMonitor,Columns,Tail).
 
 send_monitor(Pid,{ok,Monitor},_) ->
   Pid ! {ok,Monitor},
