@@ -10,23 +10,21 @@
 %%odbc:param_query(ID2,"select id from Employees where job_title=? and gender=?",[{{sql_varchar,50},["Nurse"]},{{sql_varchar,50},["Female"]}]).
 %%odbc:param_query(ID3,"select id from Employees where id=?",[{sql_integer,[50]}]).
 
-%#TODO: 1) Change in coords from integer to float, 2) fixing date mapping
-
 -module(pollution_server_odbc).
 -author("Woolfy").
 -define(ConnectionString,"DSN=odbc-driver;UID=woolfy;PWD=1234").
 
 -define(StationsTable,"CREATE TABLE Stations (
     id int IDENTITY(1,1) PRIMARY KEY,
-    x int  NOT NULL,
-    y int  NOT NULL,
+    x float  NOT NULL,
+    y float  NOT NULL,
     name varchar(50)  NOT NULL,
 );").
 -define(MeasurementsTable,"CREATE TABLE Measurements (
     id int IDENTITY(1,1) PRIMARY KEY,
     type varchar(10)  NOT NULL,
     value int  NOT NULL,
-    date time  NOT NULL,
+    date varchar(50)  NOT NULL,
     station_id int  NOT NULL,
 );").
 -define(AlterStationsMeasurements,"ALTER TABLE Measurements ADD CONSTRAINT Measurements_Stations
@@ -46,7 +44,8 @@
   remove_value/4,
   drop_tables_no_check/1,
   disconnect/1,
-  test_all_methods/0
+  test_all_methods/0,
+  convert_time_to_string/1
 ]).
 
 start() ->
@@ -89,12 +88,14 @@ fetch_measurements(Ref) ->
   fetch_values(Ref,"Select * from Measurements").
 
 add_station(Ref,Name,{X,Y}) ->
-  odbc:param_query(Ref,"insert into Stations (x,y,name) values (?,?,?)",
+  check_if_ok(
+    odbc:param_query(Ref,"insert into Stations (x,y,name) values (?,?,?)",
     [
-      {sql_integer,[X]},
-      {sql_integer,[Y]},
+      {{sql_float,2},[X]},
+      {{sql_float,2},[Y]},
       {{sql_varchar,50},[Name]}
-    ]).
+    ])
+  ).
 
 add_value(Ref,{_,_} = Location, Time,Type,Value) ->
   case check_if_station_exists(Ref,Location) of
@@ -104,10 +105,10 @@ add_value(Ref,{_,_} = Location, Time,Type,Value) ->
   end.
 
 add_value_no_check(Ref,Time,Type,Value,Index) ->
-  case odbc:param_query(Ref,"insert into Measurements (type,time,value,station_id) values(?,?,?,?)",
+  case odbc:param_query(Ref,"insert into Measurements (type,date,value,station_id) values(?,?,?,?)",
     [
-      {{sql_varchar,10},atom_to_list(Type)},
-      {sql_type_timestamp,[Time]},
+      {{sql_varchar,10},[atom_to_list(Type)]},
+      {{sql_varchar,50},[convert_time_to_string(Time)]},
       {sql_integer,[Value]},
       {sql_integer,[Index]}
     ]) of
@@ -116,7 +117,7 @@ add_value_no_check(Ref,Time,Type,Value,Index) ->
   end.
 
 check_if_station_exists(Ref,{X,Y}) ->
-  case odbc:param_query(Ref,"select id from Stations where x=? and y=?",[{sql_integer,[X]},{sql_integer,[Y]}]) of
+  case odbc:param_query(Ref,"select id from Stations where x=? and y=?",[{{sql_float,2},[X]},{{sql_float,2},[Y]}]) of
     {selected, ["id"], []} -> {ok,none};
     {selected, ["id"], [{Index}]} -> {ok,Index};
     _ -> {error,"value error"}
@@ -131,10 +132,17 @@ remove_value(Ref,{_,_} = Location,Date,Type) ->
 
 remove_value_no_check(Ref,Date,Type,Index) ->
   case odbc:param_query(Ref,"delete Measurements where station_id=? and date=? and type=?",
-    [{sql_integer,[Index]},{sql_type_timestamp,[Date]},{{sql_varchar,10},[atom_to_list(Type)]}]) of
+    [
+      {sql_integer,[Index]},
+      {{sql_varchar,50},[convert_time_to_string(Date)]},
+      {{sql_varchar,10},[atom_to_list(Type)]}
+    ]) of
     {updated,_} -> ok;
     Error -> Error
   end.
+
+convert_time_to_string({{YY,MM,DD},{HH,MI,SS}}) ->
+  integer_to_list(YY)++"/"++integer_to_list(MM)++"/"++integer_to_list(DD)++" "++integer_to_list(HH)++"/"++integer_to_list(MI)++"/"++integer_to_list(SS).
 
 drop_tables_no_check(Ref) ->
   {
@@ -147,9 +155,9 @@ test_all_methods() ->
   {ok,Ref} = connect(),
   CreateStations = create_stations(Ref),
   CreateMeasurements = create_measurements(Ref),
-  AddStation = add_station(Ref,"Stacja",{10,20}),
+  AddStation = add_station(Ref,"Stacja",{10.0,20.0}),
   Time = calendar:local_time(),
-  AddValue = add_value(Ref,{10,20},Time,pm10,20),
+  AddValue = add_value(Ref,{10.0,20.0},Time,pm10,20),
   {Ref,CreateStations,CreateMeasurements,AddStation,AddValue}.
 
 disconnect(Ref) ->
