@@ -49,7 +49,8 @@
   convert_string_to_time/1,
   get_station_by_id/1,
   init/0,
-  stop/0
+  stop/0,
+  setup_basic_data/0
 ]).
 
 start() ->
@@ -224,6 +225,18 @@ test_all_methods() ->
   AddValue = add_value(Ref,{10.0,20.0},Time,"PM10",20),
   RemoveValue = remove_value(Ref,{10.0,20.0},Time,"PM10"),
   {Ref,CreateStations,CreateMeasurements,AddStation,AddValue,RemoveValue}.
+
+setup_basic_data() ->
+  start(),
+  {ok, Ref} = connect(),
+  create_measurements(Ref),
+  create_stations(Ref),
+  S1 = add_station(Ref,"Stacja1",{10.0,20.0}),
+  S2 = add_station(Ref,"Stacja2",{22.0,21.0}),
+  V1 = add_value(Ref,{10.0,20.0},calendar:local_time(),"PM10",10),
+  V2 = add_value(Ref,{22.0,21.0},calendar:local_time(),"PM20",20),
+  disconnect(Ref),
+  {S1,S2,V1,V2}.
 
 disconnect(Ref) ->
   odbc:disconnect(Ref).

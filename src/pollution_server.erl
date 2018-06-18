@@ -26,7 +26,8 @@
   get_stations_from_database/1,
   get_measurements_from_database/1,
   get_stations_from_database/3,
-  get_measurements_from_database/3
+  get_measurements_from_database/3,
+  getMonitor/0
 ]).
 
 start() ->
@@ -41,6 +42,14 @@ init() ->
   init(Monitor,DatabaseInit).
 
 init({ok,Monitor},ok) ->
+  UpdatedMonitor = get_stations_from_database({ok,Monitor}),
+  init(UpdatedMonitor,stations);
+
+init({ok,Monitor},stations) ->
+  UpdatedMonitor = get_measurements_from_database({ok,Monitor}),
+  init(UpdatedMonitor,measurements);
+
+init({ok,Monitor},measurements) ->
   run_server(Monitor);
 
 init(Error,ErrorDatabase) ->
@@ -49,12 +58,12 @@ init(Error,ErrorDatabase) ->
 %%% Database part:
 get_stations_from_database(Monitor) ->
   {ok,Ref} = pollution_server_odbc:connect(),
-  Monitor = case pollution_server_odbc:fetch_stations(Ref) of
-    {selected, Columns,Values} -> get_stations_from_database(Monitor,Columns,Values);
+  UpdatedMonitor = case pollution_server_odbc:fetch_stations(Ref) of
+    {ok, Columns,Values} -> get_stations_from_database(Monitor,Columns,Values);
     {error,Reason} -> {error,Reason}
   end,
   pollution_server_odbc:disconnect(Ref),
-  Monitor.
+  UpdatedMonitor.
 
 get_stations_from_database({error,Reason},_,_) ->
   {error,Reason};
@@ -117,6 +126,9 @@ send_value(Pid,{error,Value},Monitor) ->
 
 run_server(Monitor) ->
   receive
+    {getMonitor,Pid,[]} ->
+      send_monitor(Pid,{ok,Monitor},{ok,Monitor});
+
     {add_station,Pid,[Name,{_,_}=Location]} ->
       UpdatedMonitor = pollution:add_station(Name,Location,Monitor),
 
@@ -227,6 +239,9 @@ getDailyMean(_,_) ->
 
 getOverLimit(Hour) ->
   send_request(getOverLimit,[Hour]).
+
+getMonitor() ->
+  send_request(getMonitor,[]).
 
 stop() ->
   send_request(stop,[]).
