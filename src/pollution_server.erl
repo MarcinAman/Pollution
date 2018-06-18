@@ -24,7 +24,9 @@
   crash/0,
   start2/0,
   get_stations_from_database/1,
-  get_measurements_from_database/1
+  get_measurements_from_database/1,
+  get_stations_from_database/3,
+  get_measurements_from_database/3
 ]).
 
 start() ->
@@ -79,11 +81,15 @@ get_measurements_from_database({ok,Monitor},_,[]) ->
   {ok,Monitor};
 
 get_measurements_from_database({ok,Monitor},Columns,[CurrentValue|Tail]) ->
-  {_,Type,Value,Date,StationID} = CurrentValue,
-  Location = case pollution_server_odbc:get_station_by_id(StationID) of
-    {ok,Value} -> Value;
-    {error,Reason} -> get_measurements_from_database({error,Reason},Columns,Tail)
-  end,
+  {_,_,_,_,StationID} = CurrentValue,
+  Location = pollution_server_odbc:get_station_by_id(StationID),
+  get_measurements_from_database(Location,Columns,[CurrentValue|Tail],Monitor).
+
+get_measurements_from_database({error,Reason},_,_,Monitor)->
+  {error,Reason,Monitor};
+
+get_measurements_from_database({ok,Location},Columns,[CurrentValue|Tail],Monitor)->
+  {_,Type,Value,Date,_} = CurrentValue,
   ConvertedTime = pollution_server_odbc:convert_string_to_time(Date),
   UpdatedMonitor = pollution:addValue(Location,ConvertedTime,Type,Value,Monitor),
   get_measurements_from_database(UpdatedMonitor,Columns,Tail).

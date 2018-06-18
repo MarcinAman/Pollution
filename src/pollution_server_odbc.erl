@@ -47,15 +47,44 @@
   test_all_methods/0,
   convert_time_to_string/1,
   convert_string_to_time/1,
-  get_station_by_id/1
+  get_station_by_id/1,
+  init/0
 ]).
 
 start() ->
   odbc:stop(),
   odbc:start().
 
+init() ->
+  start(),
+  Ref = case connect() of
+          {ok,R} -> R;
+          Other -> Other
+        end,
+  init(Ref).
+
+init({error,Reason}) ->
+  {error,Reason};
+
+init(Ref) ->
+  init(Ref,create_stations(Ref),create_measurements(Ref)).
+
+init(Ref,ok,ok) ->
+  {ok,Ref};
+
+init(Ref,{error,Reason_stations},{error,Reason_measurements}) ->
+  {error,Ref,Reason_stations,Reason_measurements};
+
+init(Ref,{error,Reason},_) ->
+  {error,Ref,Reason};
+
+init(Ref,_,{error,Reason})->
+  {error,Ref,Reason}.
+
 connect()->
   odbc:connect(?ConnectionString,[]).
+
+check_if_ok(ok) -> ok;
 
 check_if_ok({updated,_}) ->
   ok;
@@ -157,13 +186,17 @@ convert_time_to_string({{YY,MM,DD},{HH,MI,SS}}) ->
 
 convert_string_to_time(Value) ->
   Divided = string:tokens(Value," "),
-  [Head,Tail] = lists:map(fun(A) -> parse_single_tuple(A) end,Divided),
-  {Head,Tail}.
+  case lists:map(fun(A) -> parse_single_tuple(A) end,Divided) of
+    [Head,Tail] -> {Head,Tail};
+    _ -> error
+  end.
 
 parse_single_tuple(Value) ->
   Divided = string:tokens(Value,"/"),
-  [Fst,Sec,Thr] = lists:map(fun(A) -> string:to_integer(A) end,Divided),
-  {Fst,Sec,Thr}.
+  case lists:map(fun(A) -> string:to_integer(A) end,Divided) of
+    [{Fst,[]},{Sec,[]},{Thr,[]}] -> {Fst,Sec,Thr};
+    _ -> error
+  end.
 
 drop_tables_no_check(Ref) ->
   {
