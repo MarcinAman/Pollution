@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0b056ba3-317c-46f0-8f05-a484ce64fd7e" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pollution_server.erl" beforeDir="false" afterPath="$PROJECT_DIR$/src/pollution_server.erl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pollution_server_odbc.erl" beforeDir="false" afterPath="$PROJECT_DIR$/src/pollution_server_odbc.erl" afterDir="false" />
-    </list>
+    <list default="true" id="0b056ba3-317c-46f0-8f05-a484ce64fd7e" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -20,7 +16,7 @@
           <file leaf-file-name="pollution_server.erl" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/pollution_server.erl">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="15">
+                <state relative-caret-position="-1035">
                   <caret line="124" lean-forward="true" selection-start-line="124" selection-end-line="124" />
                 </state>
               </provider>
@@ -110,7 +106,7 @@
   <component name="NodePackageJsonFileManager">
     <packageJsonPaths />
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="250" />
     <option name="y" value="52" />
     <option name="width" value="1400" />
@@ -225,12 +221,12 @@
       <workItem from="1529174089768" duration="2463000" />
       <workItem from="1529262461739" duration="735000" />
       <workItem from="1529303766567" duration="10299000" />
-      <workItem from="1529344518473" duration="2456000" />
+      <workItem from="1529344518473" duration="2699000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="31940000" />
+    <option name="totallyTimeSpent" value="32183000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1320" height="784" extended-state="6" />
@@ -525,7 +521,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/pollution_server.erl">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="15">
+        <state relative-caret-position="-1035">
           <caret line="124" lean-forward="true" selection-start-line="124" selection-end-line="124" />
         </state>
       </provider>

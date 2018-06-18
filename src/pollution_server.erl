@@ -154,7 +154,7 @@ run_server(Monitor) ->
       send_monitor(Pid,UpdatedMonitor,Monitor);
 
     {removeValue,Pid,[{_,_} = Location,Date,Type]} ->
-      UpdatedMonitor = pollution:removeValue(Monitor,Location,Date,Type), %location can be a name string
+      UpdatedMonitor = pollution:removeValue(Monitor,Location,Date,Type),
 
       {ok,Ref} = pollution_server_odbc:connect(),
       case UpdatedMonitor of

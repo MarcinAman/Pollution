@@ -166,8 +166,8 @@ check_if_station_exists(Ref,{X,Y}) ->
 
 remove_value(Ref,{_,_} = Location,Date,Type) ->
   case check_if_station_exists(Ref,Location) of
-    {ok,[]} -> {error,"No such station"};
-    {ok,[Index]} -> remove_value_no_check(Ref,Date,Type,Index);
+    {ok,none} -> {error,"No such station"};
+    {ok,Index} -> remove_value_no_check(Ref,Date,Type,Index);
     Other -> Other
   end.
 
