@@ -48,7 +48,8 @@
   convert_time_to_string/1,
   convert_string_to_time/1,
   get_station_by_id/1,
-  init/0
+  init/0,
+  stop/0
 ]).
 
 start() ->
@@ -70,15 +71,19 @@ init(Ref) ->
   init(Ref,create_stations(Ref),create_measurements(Ref)).
 
 init(Ref,ok,ok) ->
-  {ok,Ref};
+  disconnect(Ref),
+  ok;
 
 init(Ref,{error,Reason_stations},{error,Reason_measurements}) ->
+  disconnect(Ref),
   {error,Ref,Reason_stations,Reason_measurements};
 
 init(Ref,{error,Reason},_) ->
+  disconnect(Ref),
   {error,Ref,Reason};
 
 init(Ref,_,{error,Reason})->
+  disconnect(Ref),
   {error,Ref,Reason}.
 
 connect()->
@@ -148,9 +153,13 @@ add_value_no_check(Ref,Time,Type,Value,Index) ->
   end.
 
 check_if_station_exists(Ref,{X,Y}) ->
-  case odbc:param_query(Ref,"select id from Stations where x=? and y=?",[{{sql_float,2},[X]},{{sql_float,2},[Y]}]) of
-    {selected, ["id"], []} -> {ok,none};
-    {selected, ["id"], [{Index}]} -> {ok,Index};
+  case odbc:param_query(Ref,"select id from Stations where x=? and y=?",
+    [
+      {{sql_float,2},[X]},
+      {{sql_float,2},[Y]}
+    ]) of
+    {selected, _ , []} -> {ok,none};
+    {selected, _ , [{Index}]} -> {ok,Index};
     _ -> {error,"value error"}
   end.
 
@@ -174,7 +183,8 @@ remove_value_no_check(Ref,Date,Type,Index) ->
 
 get_station_by_id(ID) ->
   {ok,Ref} = connect(),
-  Location = case odbc:param_query(Ref,"select x,y from Stations where station_id=?",[{sql_integer,ID}]) of
+  Location = case odbc:param_query(Ref,"select x,y from Stations where id=?",
+    [{sql_integer,[ID]}]) of
     {selected,_,[{X,Y}]} -> {ok,{X,Y}};
     {error,Reason} -> {error,Reason}
   end,
@@ -216,5 +226,7 @@ test_all_methods() ->
   {Ref,CreateStations,CreateMeasurements,AddStation,AddValue,RemoveValue}.
 
 disconnect(Ref) ->
-  odbc:disconnect(Ref),
+  odbc:disconnect(Ref).
+
+stop() ->
   odbc:stop().

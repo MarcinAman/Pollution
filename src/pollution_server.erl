@@ -37,14 +37,16 @@ start2() ->
 
 init() ->
   Monitor = pollution:create_monitor(),
-  init(Monitor).
+  DatabaseInit = pollution_server_odbc:init(),
+  init(Monitor,DatabaseInit).
 
-init({ok,Monitor}) ->
+init({ok,Monitor},ok) ->
   run_server(Monitor);
 
-init(Error) ->
-  Error.
+init(Error,ErrorDatabase) ->
+  {Error,ErrorDatabase}.
 
+%%% Database part:
 get_stations_from_database(Monitor) ->
   {ok,Ref} = pollution_server_odbc:connect(),
   Monitor = case pollution_server_odbc:fetch_stations(Ref) of
@@ -67,12 +69,12 @@ get_stations_from_database({ok,Monitor},Columns,[CurrentValue|Tail]) ->
 
 get_measurements_from_database(Monitor) ->
   {ok,Ref} = pollution_server_odbc:connect(),
-  Monitor = case pollution_server_odbc:fetch_measurements(Ref) of
-              {selected, Columns,Values} -> get_measurements_from_database(Monitor,Columns,Values);
-              {error,Reason} -> {error,Reason}
+  UpdatedMonitor = case pollution_server_odbc:fetch_measurements(Ref) of
+              {ok, Columns,Values} -> get_measurements_from_database(Monitor,Columns,Values);
+              Error -> Error
             end,
   pollution_server_odbc:disconnect(Ref),
-  Monitor.
+  UpdatedMonitor.
 
 get_measurements_from_database({error,Reason},_,_) ->
   {error,Reason};
@@ -83,16 +85,18 @@ get_measurements_from_database({ok,Monitor},_,[]) ->
 get_measurements_from_database({ok,Monitor},Columns,[CurrentValue|Tail]) ->
   {_,_,_,_,StationID} = CurrentValue,
   Location = pollution_server_odbc:get_station_by_id(StationID),
-  get_measurements_from_database(Location,Columns,[CurrentValue|Tail],Monitor).
+  get_measurements_from_database(Location,Columns,CurrentValue,Tail,Monitor).
 
-get_measurements_from_database({error,Reason},_,_,Monitor)->
+get_measurements_from_database({error,Reason},_,_,_,Monitor)->
   {error,Reason,Monitor};
 
-get_measurements_from_database({ok,Location},Columns,[CurrentValue|Tail],Monitor)->
-  {_,Type,Value,Date,_} = CurrentValue,
+get_measurements_from_database({ok,Location},Columns,CurrentElement,Tail,Monitor)->
+  {_,Type,Value,Date,_} = CurrentElement,
   ConvertedTime = pollution_server_odbc:convert_string_to_time(Date),
   UpdatedMonitor = pollution:addValue(Location,ConvertedTime,Type,Value,Monitor),
   get_measurements_from_database(UpdatedMonitor,Columns,Tail).
+
+%%%End of database part
 
 send_monitor(Pid,{ok,Monitor},_) ->
   Pid ! {ok,Monitor},

@@ -41,4 +41,33 @@ add_stations_to_monitor_test() ->
 
   ?assertMatch(Monitor,pollution_server:get_stations_from_database(Empty_monitor,Columns,Values)).
 
+add_measurements_to_monitor_test() ->
+  pollution_server_odbc:start(),
+  {ok,Ref} = pollution_server_odbc:connect(),
+
+  pollution_server_odbc:drop_tables_no_check(Ref),
+  pollution_server_odbc:create_stations(Ref),
+  pollution_server_odbc:create_measurements(Ref),
+
+  Monitor = {monitor,#{{10.0,20.0} => "Stacja1"},
+    #{"Stacja1" => {station,"Stacja1",{10.0,20.0},#{}}}},
+  Time = calendar:local_time(),
+  {ok,UpdatedMonitor} = pollution:addValue({10.0,20.0},Time,"PM10",10,Monitor),
+
+  %add values to database
+  ?assertMatch(ok,pollution_server_odbc:add_station(Ref,"Stacja1",{10.0,20.0})),
+  ?assertMatch(ok, pollution_server_odbc:add_value(Ref,{10.0,20.0},Time,"PM10",10)),
+  pollution_server_odbc:disconnect(Ref),
+
+  ?assertEqual(pollution_server:get_measurements_from_database({ok,Monitor}),{ok,UpdatedMonitor}),
+
+  {ok, Ref2} = pollution_server_odbc:connect(),
+  pollution_server_odbc:drop_tables_no_check(Ref2),
+  pollution_server_odbc:create_stations(Ref2),
+  pollution_server_odbc:create_measurements(Ref2),
+
+  pollution_server_odbc:stop().
+
+
+
 
